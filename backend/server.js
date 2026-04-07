@@ -11,11 +11,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ MongoDB connection
+// ✅ MongoDB connection (FINAL FIX)
 mongoose.connect(process.env.MONGO_URI, {
-  dbName: "staylocal",
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+  dbName: "staylocal"
 })
 .then(() => console.log("MongoDB Connected ✅"))
 .catch(err => console.log("Mongo Error:", err));
@@ -70,7 +68,7 @@ app.put("/api/homestays/:id", async (req, res) => {
   }
 });
 
-// ✅ IMPORTANT FIX → dynamic PORT
+// ✅ Dynamic PORT (Render fix)
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
