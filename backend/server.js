@@ -12,9 +12,13 @@ app.use(cors());
 app.use(express.json());
 
 // ✅ MongoDB connection
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected ✅"))
-  .catch(err => console.log("Mongo Error:", err));
+mongoose.connect(process.env.MONGO_URI, {
+  dbName: "staylocal",
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log("MongoDB Connected ✅"))
+.catch(err => console.log("Mongo Error:", err));
 
 // ✅ Test route
 app.get("/", (req, res) => {
