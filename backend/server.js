@@ -3,7 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const Homestay = require("./models/Homestay"); // ✅ moved here
+const Homestay = require("./models/Homestay");
 
 const app = express();
 
@@ -11,27 +11,35 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// MongoDB connection
+// ✅ MongoDB connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected ✅"))
-  .catch(err => console.log(err));
+  .catch(err => console.log("Mongo Error:", err));
 
-// Test route
+// ✅ Test route
 app.get("/", (req, res) => {
   res.send("Backend is running 🚀");
 });
 
 // ➕ Add homestay
 app.post("/api/homestays", async (req, res) => {
-  const newStay = new Homestay(req.body);
-  await newStay.save();
-  res.json(newStay);
+  try {
+    const newStay = new Homestay(req.body);
+    await newStay.save();
+    res.json(newStay);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // 📥 Get all homestays
 app.get("/api/homestays", async (req, res) => {
-  const stays = await Homestay.find();
-  res.json(stays);
+  try {
+    const stays = await Homestay.find();
+    res.json(stays);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ❌ Delete homestay
@@ -58,7 +66,9 @@ app.put("/api/homestays/:id", async (req, res) => {
   }
 });
 
-// Start server
-app.listen(5000, () => {
-  console.log("Server running on port 5000");
+// ✅ IMPORTANT FIX → dynamic PORT
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
