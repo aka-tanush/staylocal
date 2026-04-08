@@ -11,7 +11,7 @@ export default function Home() {
   useEffect(() => {
     const fetchFeatured = async () => {
       try {
-        const url = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const url = import.meta.env.VITE_API_URL || 'https://staylocal-backend.onrender.com/api';
         const res = await fetch(`${url}/homestays`);
         const data = await res.json();
         const homestays = data.homestays || data; // Fallback just in case

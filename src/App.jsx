@@ -11,7 +11,7 @@ import HostDashboard from './pages/HostDashboard';
 import LocalGuideDashboard from './pages/LocalGuideDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import Settings from './pages/Settings';
-import ProtectedRoute from './components/protectedRoute';
+import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
   useEffect(() => {
@@ -34,7 +34,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/homestays" element={<Homestays />} />
             <Route path="/attractions" element={<Attractions />} />
-            
+
             <Route path="/tourist-dashboard" element={
               <ProtectedRoute role="tourist"><TouristDashboard /></ProtectedRoute>
             } />
@@ -50,7 +50,7 @@ export default function App() {
             <Route path="/settings" element={
               <ProtectedRoute><Settings /></ProtectedRoute>
             } />
-            
+
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>

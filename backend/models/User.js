@@ -7,12 +7,12 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   phone: { type: String },
   profilePicture: { type: String },
-  role: { type: String, enum: ["tourist", "host", "admin"], default: "tourist" },
+  role: { type: String, enum: ["tourist", "host", "local guide", "admin"], default: "tourist" },
   wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Homestay" }],
 }, { timestamps: true });
 
 // Hash password before saving
-userSchema.pre("save", async function(next) {
+userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     return next();
   }
@@ -21,7 +21,7 @@ userSchema.pre("save", async function(next) {
 });
 
 // Method to compare password
-userSchema.methods.matchPassword = async function(enteredPassword) {
+userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
