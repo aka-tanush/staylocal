@@ -19,10 +19,10 @@ export default function TouristDashboard() {
       if (!user?._id) return;
       try {
         const touristBookings = await fetchBookingsByTourist(user._id);
-        setBookings(touristBookings);
+        setBookings(Array.isArray(touristBookings) ? touristBookings : []);
 
         const wishlistData = await fetchWishlist(user._id);
-        setWishlist(wishlistData);
+        setWishlist(Array.isArray(wishlistData) ? wishlistData : []);
       } catch (err) {
         console.error('Failed to load tourist data:', err);
       }
@@ -34,7 +34,7 @@ export default function TouristDashboard() {
   const handleCancel = async (id, homestayName) => {
     try {
       await deleteBooking(id);
-      setBookings(bookings.filter(b => b._id !== id));
+      setBookings((Array.isArray(bookings) ? bookings : []).filter(b => b._id !== id));
       setConfirmCancel(null);
       setSuccessMessage(`Booking for ${homestayName} cancelled successfully.`);
       setTimeout(() => setSuccessMessage(''), 3000);
@@ -102,8 +102,8 @@ export default function TouristDashboard() {
             <section style={{ marginBottom: '40px' }}>
               <h2>My Bookings</h2>
               <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {bookings.length > 0 ? (
-                  bookings.map(booking => (
+                {Array.isArray(bookings) && bookings.length > 0 ? (
+                  (Array.isArray(bookings) ? bookings : []).map(booking => (
                     <div key={booking._id} className="glass" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ flex: 1 }}>
                         <h3 style={{ marginBottom: '5px' }}>{booking.homestayId?.title || 'Unknown Homestay'}</h3>
@@ -149,8 +149,8 @@ export default function TouristDashboard() {
             <section style={{ marginBottom: '40px' }}>
               <h2>My Wishlist</h2>
               <div className="grid" style={{ marginTop: '20px' }}>
-                {wishlist.length > 0 ? (
-                  wishlist.map(item => (
+                {Array.isArray(wishlist) && wishlist.length > 0 ? (
+                  (Array.isArray(wishlist) ? wishlist : []).map(item => (
                     <HomestayCard key={item._id} homestay={item} />
                   ))
                 ) : (

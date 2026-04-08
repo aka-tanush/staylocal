@@ -11,7 +11,8 @@ export default function ReviewSystem({ homestayId, homestayName, onClose }) {
     const loadReviews = async () => {
       if (!homestayId) return;
       const data = await fetchReviews(homestayId);
-      setReviews(data);
+      console.log("API response:", data);
+      setReviews(Array.isArray(data) ? data : []);
     };
     loadReviews();
   }, [homestayId]);
@@ -28,7 +29,7 @@ export default function ReviewSystem({ homestayId, homestayName, onClose }) {
 
     try {
       const saved = await submitReview(review);
-      setReviews([...reviews, { ...saved, userName: user?.name, date: new Date().toLocaleDateString() }]);
+      setReviews([...(Array.isArray(reviews) ? reviews : []), { ...saved, userName: user?.name, date: new Date().toLocaleDateString() }]);
       setNewReview({ rating: 5, comment: '' });
       if (onClose) onClose();
     } catch (err) {
@@ -80,15 +81,17 @@ export default function ReviewSystem({ homestayId, homestayName, onClose }) {
         <>
           <h3>Reviews ({reviews.length})</h3>
           <div className="reviews-list" style={{ marginTop: '20px' }}>
-            {reviews.length > 0 ? (
-              reviews.map(review => (
+            {Array.isArray(reviews) && reviews.length > 0 ? (
+              (Array.isArray(reviews) ? reviews : []).map(review => (
                 <div key={review.id} className="review-item glass" style={{ padding: '15px', marginBottom: '15px', borderRadius: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
                     <strong>{review.userName}</strong>
                     <span style={{ opacity: 0.5, fontSize: '0.8rem' }}>{review.date}</span>
                   </div>
                   <div className="stars" style={{ marginBottom: '10px' }}>
-                    {[...Array(review.rating)].map((_, i) => <Star key={i} size={14} fill="#ffb400" color="#ffb400" />)}
+                    {Array.from({ length: Number(review?.rating) || 0 }).map((_, i) => (
+                      <Star key={i} size={14} fill="#ffb400" color="#ffb400" />
+                    ))}
                   </div>
                   <p style={{ fontSize: '0.9rem' }}>{review.comment}</p>
                 </div>

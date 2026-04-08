@@ -18,10 +18,10 @@ export default function LocalGuideDashboard() {
   useEffect(() => {
     const loadData = () => {
       const allPlaces = JSON.parse(localStorage.getItem('places')) || [];
-      setMyPlaces(allPlaces.filter(p => p.guideId === user?.id));
+      setMyPlaces((Array.isArray(allPlaces) ? allPlaces : []).filter(p => p.guideId === user?.id));
 
       const allReviews = JSON.parse(localStorage.getItem('reviews')) || [];
-      setReviews(allReviews);
+      setReviews(Array.isArray(allReviews) ? allReviews : []);
     };
 
     loadData();
@@ -51,9 +51,9 @@ export default function LocalGuideDashboard() {
     };
     
     const allPlaces = JSON.parse(localStorage.getItem('places')) || [];
-    const updated = [...allPlaces, place];
+    const updated = [...(Array.isArray(allPlaces) ? allPlaces : []), place];
     localStorage.setItem('places', JSON.stringify(updated));
-    setMyPlaces(updated.filter(p => p.guideId === user.id));
+    setMyPlaces((Array.isArray(updated) ? updated : []).filter(p => p.guideId === user.id));
     
     // Add notification
     const notifications = JSON.parse(localStorage.getItem('notifications')) || [];
@@ -69,9 +69,9 @@ export default function LocalGuideDashboard() {
 
   const handleDelete = (id) => {
     const allPlaces = JSON.parse(localStorage.getItem('places')) || [];
-    const updated = allPlaces.filter(p => p.id !== id);
+    const updated = (Array.isArray(allPlaces) ? allPlaces : []).filter(p => p.id !== id);
     localStorage.setItem('places', JSON.stringify(updated));
-    setMyPlaces(updated.filter(p => p.guideId === user.id));
+    setMyPlaces((Array.isArray(updated) ? updated : []).filter(p => p.guideId === user.id));
     window.dispatchEvent(new Event('storage'));
   };
 
@@ -153,7 +153,7 @@ export default function LocalGuideDashboard() {
               <section>
                 <h2>My Recommended Places</h2>
                 <div className="grid" style={{ marginTop: '20px' }}>
-                  {myPlaces.length > 0 ? myPlaces.map(place => (
+                  {Array.isArray(myPlaces) && myPlaces.length > 0 ? (Array.isArray(myPlaces) ? myPlaces : []).map(place => (
                     <div key={place.id} className="card glass">
                       <img src={place.image} alt={place.name} className="card-img" referrerPolicy="no-referrer" />
                       <div className="card-content">
@@ -175,7 +175,7 @@ export default function LocalGuideDashboard() {
               <p style={{ opacity: 0.7, marginBottom: '30px' }}>Feedback from tourists who visited your recommended places.</p>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {reviews.length > 0 ? reviews.map(review => (
+                {Array.isArray(reviews) && reviews.length > 0 ? (Array.isArray(reviews) ? reviews : []).map(review => (
                   <div key={review.id} className="glass" style={{ padding: '20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                       <h4 style={{ margin: 0 }}>{review.user || review.userName}</h4>

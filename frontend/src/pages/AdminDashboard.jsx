@@ -21,7 +21,9 @@ export default function AdminDashboard() {
         const [homestayRes] = await Promise.all([
           api.get('/homestays'),
         ]);
-        setHomestays(homestayRes.data);
+        console.log("API response:", homestayRes.data);
+        const rawHomestays = homestayRes.data?.homestays ?? homestayRes.data?.data ?? homestayRes.data;
+        setHomestays(Array.isArray(rawHomestays) ? rawHomestays : []);
 
         const storedSettings = JSON.parse(localStorage.getItem('adminSettings')) || { notifications: true, darkMode: false };
         setAdminSettings(storedSettings);
@@ -34,14 +36,14 @@ export default function AdminDashboard() {
   }, []);
 
   const handleDeleteUser = (id) => {
-    const updatedUsers = users.filter(u => u._id !== id);
+    const updatedUsers = (Array.isArray(users) ? users : []).filter(u => u._id !== id);
     setUsers(updatedUsers);
   };
 
   const handleDeleteListing = async (id) => {
     try {
       await api.delete(`/homestays/${id}`);
-      setHomestays(homestays.filter(h => h._id !== id));
+      setHomestays((Array.isArray(homestays) ? homestays : []).filter(h => h._id !== id));
     } catch (err) {
       console.error('Failed to delete listing:', err);
     }
@@ -120,8 +122,8 @@ export default function AdminDashboard() {
             </tr>
           </thead>
           <tbody>
-            {users.length > 0 ? (
-              users.map(user => (
+            {Array.isArray(users) && users.length > 0 ? (
+              (Array.isArray(users) ? users : []).map(user => (
                 <tr key={user._id || user.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                   <td style={{ padding: '15px 20px' }}>{user.name}</td>
                   <td style={{ padding: '15px 20px' }}>{user.email}</td>
@@ -155,8 +157,8 @@ export default function AdminDashboard() {
       <p style={{ opacity: 0.7, marginBottom: '30px' }}>Review and manage all homestay listings.</p>
       
       <div className="grid">
-        {homestays.length > 0 ? (
-          homestays.map(stay => (
+        {Array.isArray(homestays) && homestays.length > 0 ? (
+          (Array.isArray(homestays) ? homestays : []).map(stay => (
             <div key={stay._id || stay.id} className="card glass">
               <img src={stay.images?.[0] || stay.image || "https://picsum.photos/400/300"} alt={stay.title || stay.name} className="card-img" referrerPolicy="no-referrer" />
               <div className="card-content">

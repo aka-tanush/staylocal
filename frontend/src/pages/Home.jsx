@@ -13,7 +13,9 @@ export default function Home() {
     const fetchFeatured = async () => {
       try {
         const res = await api.get('/homestays');
-        const data = res.data.homestays || res.data;
+        console.log("API response:", res.data);
+        const raw = res.data?.homestays ?? res.data?.data ?? res.data;
+        const data = Array.isArray(raw) ? raw : [];
         setFeatured(data.slice(0, 4));
       } catch (err) {
         console.error("Failed to load featured homestays", err);
@@ -77,8 +79,8 @@ export default function Home() {
           </Link>
         </div>
         <div className="grid">
-          {featured.length > 0 ? (
-            featured.map(item => (
+          {Array.isArray(featured) && featured.length > 0 ? (
+            (Array.isArray(featured) ? featured : []).map(item => (
               <HomestayCard key={item._id || item.id} homestay={item} />
             ))
           ) : (
@@ -118,7 +120,9 @@ export default function Home() {
             ].map(rev => (
               <div key={rev.id} className="glass" style={{ padding: '30px' }}>
                 <div className="stars">
-                  {[...Array(rev.rating)].map((_, i) => <Star key={i} size={16} fill="currentColor" />)}
+                  {Array.from({ length: Number(rev?.rating) || 0 }).map((_, i) => (
+                    <Star key={i} size={16} fill="currentColor" />
+                  ))}
                 </div>
                 <p style={{ fontStyle: 'italic', marginBottom: '20px' }}>"{rev.text}"</p>
                 <p style={{ fontWeight: '700' }}>- {rev.name}</p>

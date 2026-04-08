@@ -7,7 +7,7 @@ export default function Attractions() {
 
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem('places')) || [];
-    setPlaces(data);
+    setPlaces(Array.isArray(data) ? data : []);
   }, []);
 
   return (
@@ -25,8 +25,8 @@ export default function Attractions() {
       </div>
 
       <div className="grid">
-        {places.length > 0 ? (
-          places.map(place => (
+        {Array.isArray(places) && places.length > 0 ? (
+          (Array.isArray(places) ? places : []).map(place => (
             <div key={place.id} className="card glass">
               <img src={place.image || 'https://picsum.photos/seed/place/400/300'} alt={place.name} className="card-img" referrerPolicy="no-referrer" />
               <div className="card-content">

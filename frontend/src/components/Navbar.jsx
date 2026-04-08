@@ -93,8 +93,8 @@ export default function Navbar() {
                       <h4 style={{ margin: 0 }}>Notifications</h4>
                       <button onClick={clearNotifications} style={{ fontSize: '0.8rem', color: 'var(--primary)', cursor: 'pointer' }}>Clear All</button>
                     </div>
-                    {notifications.length > 0 ? (
-                      notifications.slice().reverse().map(n => (
+                    {Array.isArray(notifications) && notifications.length > 0 ? (
+                      (Array.isArray(notifications) ? notifications : []).slice().reverse().map(n => (
                         <div key={n.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--border-color)', fontSize: '0.9rem' }}>
                           <p style={{ margin: 0 }}>{n.message}</p>
                           <span style={{ fontSize: '0.75rem', opacity: 0.5, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>

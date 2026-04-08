@@ -23,7 +23,9 @@ export default function Homestays() {
     const fetchData = async () => {
       try {
         const res = await api.get("/homestays");
-        const data = res.data.homestays || res.data; // Support both structures
+        console.log("API response:", res.data);
+        const raw = res.data?.homestays ?? res.data;
+        const data = Array.isArray(raw) ? raw : [];
         setHomestays(data);
         setFiltered(data);
       } catch (err) {
@@ -38,7 +40,7 @@ export default function Homestays() {
 
   // ✅ Filtering
   useEffect(() => {
-    const result = homestays.filter((item) => {
+    const result = (Array.isArray(homestays) ? homestays : []).filter((item) => {
       const title = item.title || item.name || "";
       const location = item.location || "";
       return (
@@ -53,7 +55,7 @@ export default function Homestays() {
 
   // ➕ ADD
   const handleAdd = (newStay) => {
-    setHomestays([newStay, ...homestays]);
+    setHomestays([newStay, ...(Array.isArray(homestays) ? homestays : [])]);
     setMessage("Added successfully ✅");
   };
 
@@ -64,7 +66,7 @@ export default function Homestays() {
 
   // 🔄 UPDATE
   const handleUpdate = (updatedStay) => {
-    const updated = homestays.map((item) =>
+    const updated = (Array.isArray(homestays) ? homestays : []).map((item) =>
       item._id === updatedStay._id ? updatedStay : item
     );
 
@@ -78,7 +80,7 @@ export default function Homestays() {
     try {
       await api.delete(`/homestays/${id}`);
 
-      setHomestays(homestays.filter((item) => item._id !== id));
+      setHomestays((Array.isArray(homestays) ? homestays : []).filter((item) => item._id !== id));
       setMessage("Deleted ❌");
 
     } catch (err) {
@@ -117,7 +119,7 @@ export default function Homestays() {
       />
 
       <div className="grid">
-        {filtered.map((item) => (
+        {(Array.isArray(filtered) ? filtered : []).map((item) => (
           <HomestayCard
             key={item._id}
             homestay={item}

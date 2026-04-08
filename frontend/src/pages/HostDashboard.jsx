@@ -25,12 +25,14 @@ export default function HostDashboard() {
       try {
         // Fetch homestays filtered by host
         const staysRes = await api.get('/homestays/host/mylisted');
-        setMyStays(staysRes.data);
+        console.log("API response:", staysRes.data);
+        const rawStays = staysRes.data?.homestays ?? staysRes.data?.data ?? staysRes.data;
+        setMyStays(Array.isArray(rawStays) ? rawStays : []);
 
         // Fetch bookings for this host
         if (user?._id) {
           const hostBookings = await fetchBookingsByHost(user._id);
-          setBookings(hostBookings);
+          setBookings(Array.isArray(hostBookings) ? hostBookings : []);
         }
       } catch (err) {
         console.error('Failed to load host data:', err);
@@ -69,7 +71,7 @@ export default function HostDashboard() {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
-      setMyStays([...myStays, res.data]);
+      setMyStays([...(Array.isArray(myStays) ? myStays : []), res.data]);
       setShowAdd(false);
       setNewStay({ name: '', location: '', price: '', image: '' });
       setImageFile(null);
@@ -83,7 +85,7 @@ export default function HostDashboard() {
   const handleDelete = async (id) => {
     try {
       await api.delete(`/homestays/${id}`);
-      setMyStays(myStays.filter(s => s._id !== id));
+      setMyStays((Array.isArray(myStays) ? myStays : []).filter(s => s._id !== id));
       setSuccessMessage('Listing deleted.');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
@@ -94,7 +96,7 @@ export default function HostDashboard() {
   const handleCancelBooking = async (id, homestayName) => {
     try {
       await deleteBooking(id);
-      setBookings(bookings.filter(b => b._id !== id));
+      setBookings((Array.isArray(bookings) ? bookings : []).filter(b => b._id !== id));
       setConfirmCancel(null);
       setSuccessMessage(`Booking for ${homestayName} cancelled successfully.`);
       setTimeout(() => setSuccessMessage(''), 3000);
@@ -191,7 +193,7 @@ export default function HostDashboard() {
               <section style={{ marginBottom: '40px' }}>
                 <h2>My Listings</h2>
                 <div className="grid" style={{ marginTop: '20px' }}>
-                  {myStays.length > 0 ? myStays.map(stay => (
+                  {Array.isArray(myStays) && myStays.length > 0 ? (Array.isArray(myStays) ? myStays : []).map(stay => (
                     <div key={stay._id} className="card glass">
                       <img src={stay.images?.[0] || stay.image || "https://picsum.photos/400/300"} alt={stay.title || stay.name} className="card-img" referrerPolicy="no-referrer" />
                       <div className="card-content">
@@ -214,8 +216,8 @@ export default function HostDashboard() {
               <p style={{ opacity: 0.7, marginBottom: '30px' }}>Manage reservations for your homestays.</p>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                {bookings.length > 0 ? (
-                  bookings.map(b => (
+                {Array.isArray(bookings) && bookings.length > 0 ? (
+                  (Array.isArray(bookings) ? bookings : []).map(b => (
                     <div key={b._id} className="glass" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <h3 style={{ margin: '0 0 5px 0' }}>{b.homestayId?.title || 'Unknown Homestay'}</h3>
