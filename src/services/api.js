@@ -1,12 +1,9 @@
-import axios from 'axios';
+import axios from "axios";
 
-// ✅ Detect environment
-const isLocal = window.location.hostname === "localhost";
-
-// ✅ Use correct backend automatically
-const baseURL = isLocal
-  ? "http://localhost:5000/api" // LOCAL backend
-  : import.meta.env.VITE_API_URL || "https://staylocal-backend.onrender.com/api"; // PRODUCTION
+// ✅ Always prefer env variable
+const baseURL =
+  import.meta.env.VITE_API_URL ||
+  "https://staylocal-backend.onrender.com";
 
 const api = axios.create({
   baseURL,
