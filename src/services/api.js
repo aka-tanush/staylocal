@@ -3,7 +3,7 @@ import axios from "axios";
 // ✅ Always prefer env variable
 const baseURL =
   import.meta.env.VITE_API_URL ||
-  "https://staylocal-backend.onrender.com";
+  "https://staylocal-backend.onrender.com/api";
 
 const api = axios.create({
   baseURL,
