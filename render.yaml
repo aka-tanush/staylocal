@@ -1,14 +1,17 @@
 services:
   - type: web
     name: staylocal-backend
-    env: node
+    env: docker
     rootDir: backend
-    buildCommand: npm install
-    startCommand: node server.js
+    dockerfilePath: ./Dockerfile
     envVars:
-      - key: NODE_ENV
-        value: production
-      - key: MONGO_URI
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
         sync: false
       - key: JWT_SECRET
         sync: false
+      - key: JWT_EXPIRATION
+        value: "2592000000"
