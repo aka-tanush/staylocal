@@ -2,6 +2,7 @@ package com.staylocal.backend.config;
 
 import com.staylocal.backend.security.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,6 +29,7 @@ import java.util.List;
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
+@Slf4j
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
@@ -37,16 +39,28 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        log.info("CORS allowed origin: {}", allowedOrigin);
+
         http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .anyRequest().authenticated()
-                )
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .csrf(AbstractHttpConfigurer::disable)
+            .cors(cors -> cors.configurationSource(request -> {
+                CorsConfiguration config = new CorsConfiguration();
+                config.setAllowedOriginPatterns(List.of(allowedOrigin));
+                config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                config.setAllowedHeaders(List.of("Authorization", "Content-Type", "*"));
+                config.setAllowCredentials(true);
+                return config;
+            }))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .anyRequest().authenticated()
+            )
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            );
+
+        http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
