@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import HomestayCard from "../components/HomestayCard";
 import AddHomestayForm from "../components/AddHomestayForm";
+import api from "../services/api";
 
 export default function Homestays() {
   const [homestays, setHomestays] = useState([]);
@@ -21,8 +22,8 @@ export default function Homestays() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/homestays");
-        const data = await res.json();
+        const res = await api.get("/homestays");
+        const data = res.data.homestays || res.data; // Support both structures
         setHomestays(data);
         setFiltered(data);
       } catch (err) {
@@ -38,9 +39,11 @@ export default function Homestays() {
   // ✅ Filtering
   useEffect(() => {
     const result = homestays.filter((item) => {
+      const title = item.title || item.name || "";
+      const location = item.location || "";
       return (
-        item.name.toLowerCase().includes(filters.search.toLowerCase()) &&
-        item.location.toLowerCase().includes(filters.location.toLowerCase()) &&
+        title.toLowerCase().includes(filters.search.toLowerCase()) &&
+        location.toLowerCase().includes(filters.location.toLowerCase()) &&
         item.price <= filters.priceRange
       );
     });
@@ -73,9 +76,7 @@ export default function Homestays() {
   // ❌ DELETE
   const handleDelete = async (id) => {
     try {
-      await fetch(`http://localhost:5000/api/homestays/${id}`, {
-        method: "DELETE"
-      });
+      await api.delete(`/homestays/${id}`);
 
       setHomestays(homestays.filter((item) => item._id !== id));
       setMessage("Deleted ❌");

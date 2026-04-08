@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Home, MapPin, Calendar, TrendingUp, Shield, Trash2, Bell, Moon, Sun } from 'lucide-react';
+import api from '../services/api';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -15,51 +16,35 @@ export default function AdminDashboard() {
   const adminUser = JSON.parse(localStorage.getItem('user')) || { name: 'Admin', email: 'admin@staylocal.com' };
 
   useEffect(() => {
-    const loadData = () => {
-      const storedUsers = JSON.parse(localStorage.getItem('users')) || [];
-      const storedHomestays = JSON.parse(localStorage.getItem('homestays')) || [];
-      const storedPlaces = JSON.parse(localStorage.getItem('places')) || [];
-      const storedBookings = JSON.parse(localStorage.getItem('bookings')) || [];
-      const storedSettings = JSON.parse(localStorage.getItem('adminSettings')) || { notifications: true, darkMode: false };
+    const loadData = async () => {
+      try {
+        const [homestayRes] = await Promise.all([
+          api.get('/homestays'),
+        ]);
+        setHomestays(homestayRes.data);
 
-      setUsers(storedUsers);
-      setHomestays(storedHomestays);
-      setPlaces(storedPlaces);
-      setBookings(storedBookings);
-      setAdminSettings(storedSettings);
+        const storedSettings = JSON.parse(localStorage.getItem('adminSettings')) || { notifications: true, darkMode: false };
+        setAdminSettings(storedSettings);
+      } catch (err) {
+        console.error('Failed to load admin data:', err);
+      }
     };
 
     loadData();
-    window.addEventListener('storage', loadData);
-    return () => window.removeEventListener('storage', loadData);
   }, []);
 
   const handleDeleteUser = (id) => {
-    const updatedUsers = users.filter(u => u.id !== id);
-    localStorage.setItem('users', JSON.stringify(updatedUsers));
+    const updatedUsers = users.filter(u => u._id !== id);
     setUsers(updatedUsers);
-    
-    // Add notification
-    const notifications = JSON.parse(localStorage.getItem('notifications')) || [];
-    localStorage.setItem('notifications', JSON.stringify([
-      ...notifications,
-      { id: Date.now(), message: `User deleted by Admin`, time: new Date() }
-    ]));
-    window.dispatchEvent(new Event('storage'));
   };
 
-  const handleDeleteListing = (id) => {
-    const updatedHomestays = homestays.filter(h => h.id !== id);
-    localStorage.setItem('homestays', JSON.stringify(updatedHomestays));
-    setHomestays(updatedHomestays);
-
-    // Add notification
-    const notifications = JSON.parse(localStorage.getItem('notifications')) || [];
-    localStorage.setItem('notifications', JSON.stringify([
-      ...notifications,
-      { id: Date.now(), message: `Listing deleted by Admin`, time: new Date() }
-    ]));
-    window.dispatchEvent(new Event('storage'));
+  const handleDeleteListing = async (id) => {
+    try {
+      await api.delete(`/homestays/${id}`);
+      setHomestays(homestays.filter(h => h._id !== id));
+    } catch (err) {
+      console.error('Failed to delete listing:', err);
+    }
   };
 
   const toggleSetting = (key) => {
@@ -137,7 +122,7 @@ export default function AdminDashboard() {
           <tbody>
             {users.length > 0 ? (
               users.map(user => (
-                <tr key={user.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                <tr key={user._id || user.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                   <td style={{ padding: '15px 20px' }}>{user.name}</td>
                   <td style={{ padding: '15px 20px' }}>{user.email}</td>
                   <td style={{ padding: '15px 20px' }}>
@@ -145,7 +130,7 @@ export default function AdminDashboard() {
                   </td>
                   <td style={{ padding: '15px 20px' }}>
                     <button 
-                      onClick={() => handleDeleteUser(user.id)}
+                      onClick={() => handleDeleteUser(user._id || user.id)}
                       style={{ color: 'var(--primary)', cursor: 'pointer' }}
                     >
                       <Trash2 size={18} />
@@ -172,13 +157,13 @@ export default function AdminDashboard() {
       <div className="grid">
         {homestays.length > 0 ? (
           homestays.map(stay => (
-            <div key={stay.id} className="card glass">
+            <div key={stay._id || stay.id} className="card glass">
               <img src={stay.image} alt={stay.name} className="card-img" referrerPolicy="no-referrer" />
               <div className="card-content">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <h3 className="card-title">{stay.name}</h3>
                   <button 
-                    onClick={() => handleDeleteListing(stay.id)}
+                    onClick={() => handleDeleteListing(stay._id || stay.id)}
                     style={{ color: 'var(--primary)', cursor: 'pointer' }}
                   >
                     <Trash2 size={18} />

@@ -9,8 +9,18 @@ export default function Home() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const homestays = JSON.parse(localStorage.getItem('homestays')) || [];
-    setFeatured(homestays.slice(0, 4));
+    const fetchFeatured = async () => {
+      try {
+        const url = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const res = await fetch(`${url}/homestays`);
+        const data = await res.json();
+        const homestays = data.homestays || data; // Fallback just in case
+        setFeatured(homestays.slice(0, 4));
+      } catch (err) {
+        console.error("Failed to load featured homestays", err);
+      }
+    };
+    fetchFeatured();
   }, []);
 
   const handleSearch = (e) => {
@@ -70,7 +80,7 @@ export default function Home() {
         <div className="grid">
           {featured.length > 0 ? (
             featured.map(item => (
-              <HomestayCard key={item.id} homestay={item} />
+              <HomestayCard key={item._id || item.id} homestay={item} />
             ))
           ) : (
             <p>No homestays available. Log in as Host to add some!</p>

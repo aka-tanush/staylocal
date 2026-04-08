@@ -1,81 +1,48 @@
 require("dotenv").config();
-
 const express = require("express");
-const mongoose = require("mongoose");
 const cors = require("cors");
-const Homestay = require("./models/Homestay");
+const morgan = require("morgan");
+const path = require("path");
+const connectDB = require("./config/db");
+const { notFound, errorHandler } = require("./middleware/errorMiddleware");
+
+// Route files
+const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
+const homestayRoutes = require("./routes/homestayRoutes");
+const bookingRoutes = require("./routes/bookingRoutes");
+
+// Connect to database
+connectDB();
 
 const app = express();
 
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev"));
+}
+
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true }));
 
-// ✅ Async start function (VERY IMPORTANT)
-const startServer = async () => {
-  try {
-    // Connect DB FIRST
-    await mongoose.connect(process.env.MONGO_URI, {
-      dbName: "staylocal",
-    });
-
-    console.log("MongoDB Connected ✅");
-
-    // THEN start server
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-
-  } catch (err) {
-    console.error("MongoDB connection failed ❌", err);
-  }
-};
-
-startServer();
-
-// Routes
+// Welcome route
 app.get("/", (req, res) => {
-  res.send("Backend is running 🚀");
+  res.send("StayLocal API is running...");
 });
 
-app.post("/api/homestays", async (req, res) => {
-  try {
-    const newStay = new Homestay(req.body);
-    await newStay.save();
-    res.json(newStay);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// API Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/homestays", homestayRoutes);
+app.use("/api/bookings", bookingRoutes);
 
-app.get("/api/homestays", async (req, res) => {
-  try {
-    const stays = await Homestay.find();
-    res.json(stays);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// Error Handling Middleware
+app.use(notFound);
+app.use(errorHandler);
 
-app.delete("/api/homestays/:id", async (req, res) => {
-  try {
-    await Homestay.findByIdAndDelete(req.params.id);
-    res.json({ message: "Deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+const PORT = process.env.PORT || 5000;
 
-app.put("/api/homestays/:id", async (req, res) => {
-  try {
-    const updatedStay = await Homestay.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-    res.json(updatedStay);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+app.listen(PORT, () => {
+  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Star } from 'lucide-react';
+import { fetchReviews, submitReview } from '../api/homestayApi';
 
 export default function ReviewSystem({ homestayId, homestayName, onClose }) {
   const [reviews, setReviews] = useState([]);
@@ -7,53 +8,32 @@ export default function ReviewSystem({ homestayId, homestayName, onClose }) {
   const user = JSON.parse(localStorage.getItem('user'));
 
   useEffect(() => {
-    const loadReviews = () => {
-      const allReviews = JSON.parse(localStorage.getItem('reviews')) || [];
-      setReviews(allReviews.filter(r => r.homestayId === homestayId));
+    const loadReviews = async () => {
+      if (!homestayId) return;
+      const data = await fetchReviews(homestayId);
+      setReviews(data);
     };
     loadReviews();
-    window.addEventListener('storage', loadReviews);
-    return () => window.removeEventListener('storage', loadReviews);
   }, [homestayId]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    const user = JSON.parse(localStorage.getItem('user'));
     const review = {
-      id: Date.now(),
       homestayId,
-      homestayName: homestayName || 'Homestay',
-      userName: user.name,
-      ...newReview,
-      date: new Date().toLocaleDateString()
+      userId: user?._id,
+      rating: newReview.rating,
+      comment: newReview.comment,
     };
 
-    const allReviews = JSON.parse(localStorage.getItem('reviews')) || [];
-    const updatedReviews = [...allReviews, review];
-    localStorage.setItem('reviews', JSON.stringify(updatedReviews));
-    
-    // Add notification
-    const notifications = JSON.parse(localStorage.getItem('notifications')) || [];
-    localStorage.setItem('notifications', JSON.stringify([
-      ...notifications, 
-      { id: Date.now(), message: `Review submitted successfully for ${homestayName || 'homestay'}`, time: new Date() }
-    ]));
-
-    // Update average rating in homestays
-    const homestays = JSON.parse(localStorage.getItem('homestays')) || [];
-    const updatedHomestays = homestays.map(h => {
-      if (h.id === homestayId) {
-        const hReviews = updatedReviews.filter(r => r.homestayId === homestayId);
-        const avg = hReviews.reduce((acc, curr) => acc + curr.rating, 0) / hReviews.length;
-        return { ...h, rating: avg.toFixed(1) };
-      }
-      return h;
-    });
-    localStorage.setItem('homestays', JSON.stringify(updatedHomestays));
-    
-    setReviews(updatedReviews.filter(r => r.homestayId === homestayId));
-    setNewReview({ rating: 5, comment: '' });
-    window.dispatchEvent(new Event('storage'));
-    if (onClose) onClose();
+    try {
+      const saved = await submitReview(review);
+      setReviews([...reviews, { ...saved, userName: user?.name, date: new Date().toLocaleDateString() }]);
+      setNewReview({ rating: 5, comment: '' });
+      if (onClose) onClose();
+    } catch (err) {
+      console.error('Failed to submit review:', err);
+    }
   };
 
   return (

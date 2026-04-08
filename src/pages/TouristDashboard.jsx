@@ -2,75 +2,45 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, Star, Heart, MapPin, Clock, Trash2, CreditCard, MessageSquare } from 'lucide-react';
 import HomestayCard from '../components/HomestayCard';
 import ReviewSystem from '../components/ReviewSystem';
+import { fetchWishlist } from '../api/homestayApi';
+import { fetchBookingsByTourist, deleteBooking } from '../services/bookingApi';
 
 export default function TouristDashboard() {
   const [activeTab, setActiveTab] = useState('bookings');
   const [bookings, setBookings] = useState([]);
   const [wishlist, setWishlist] = useState([]);
-  const [reviews, setReviews] = useState([]);
-  const [confirmCancel, setConfirmCancel] = useState(null); // {id, name}
-  const [reviewingBooking, setReviewingBooking] = useState(null); // {id, homestayId, homestayName}
+  const [reviewingBooking, setReviewingBooking] = useState(null);
+  const [confirmCancel, setConfirmCancel] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
   const user = JSON.parse(localStorage.getItem('user'));
 
   useEffect(() => {
-    const loadData = () => {
-      const allBookings = JSON.parse(localStorage.getItem('bookings')) || [];
-      setBookings(allBookings.filter(b => b.userRole === 'Tourist'));
-      
-      const allReviews = JSON.parse(localStorage.getItem('reviews')) || [];
-      setReviews(allReviews.filter(r => r.userName === user?.name));
+    const loadData = async () => {
+      if (!user?._id) return;
+      try {
+        const touristBookings = await fetchBookingsByTourist(user._id);
+        setBookings(touristBookings);
 
-      const storedWishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
-      setWishlist(storedWishlist);
+        const wishlistData = await fetchWishlist(user._id);
+        setWishlist(wishlistData);
+      } catch (err) {
+        console.error('Failed to load tourist data:', err);
+      }
     };
 
     loadData();
-    window.addEventListener('storage', loadData);
-    return () => window.removeEventListener('storage', loadData);
-  }, [user?.name]);
+  }, [user?._id]);
 
-  const handleCancel = (id, homestayName) => {
-    const allBookings = JSON.parse(localStorage.getItem('bookings')) || [];
-    const updatedBookings = allBookings.filter(b => b.id !== id);
-    localStorage.setItem('bookings', JSON.stringify(updatedBookings));
-    setBookings(updatedBookings.filter(b => b.userRole === 'Tourist'));
-
-    // Add notification
-    const notifications = JSON.parse(localStorage.getItem('notifications')) || [];
-    localStorage.setItem('notifications', JSON.stringify([
-      ...notifications,
-      { id: Date.now(), message: `Booking cancelled successfully for ${homestayName}`, type: 'cancellation', time: new Date() }
-    ]));
-
-    window.dispatchEvent(new Event('storage'));
-    setConfirmCancel(null);
-    setSuccessMessage(`Booking for ${homestayName} cancelled successfully.`);
-    setTimeout(() => setSuccessMessage(''), 3000);
-  };
-
-  const handlePayment = (id, homestayName) => {
-    const allBookings = JSON.parse(localStorage.getItem('bookings')) || [];
-    const updatedBookings = allBookings.map(b => {
-      if (b.id === id) {
-        return { ...b, paymentStatus: 'Paid', status: 'Confirmed' };
-      }
-      return b;
-    });
-    
-    localStorage.setItem('bookings', JSON.stringify(updatedBookings));
-    setBookings(updatedBookings.filter(b => b.userRole === 'Tourist'));
-
-    // Add notification
-    const notifications = JSON.parse(localStorage.getItem('notifications')) || [];
-    localStorage.setItem('notifications', JSON.stringify([
-      ...notifications,
-      { id: Date.now(), message: `Payment Successful & Booking Confirmed for ${homestayName}`, type: 'payment', time: new Date() }
-    ]));
-
-    window.dispatchEvent(new Event('storage'));
-    setSuccessMessage(`Payment Successful & Booking Confirmed for ${homestayName}`);
-    setTimeout(() => setSuccessMessage(''), 3000);
+  const handleCancel = async (id, homestayName) => {
+    try {
+      await deleteBooking(id);
+      setBookings(bookings.filter(b => b._id !== id));
+      setConfirmCancel(null);
+      setSuccessMessage(`Booking for ${homestayName} cancelled successfully.`);
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      console.error('Failed to cancel booking:', err);
+    }
   };
 
   return (
@@ -91,13 +61,6 @@ export default function TouristDashboard() {
               style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%', color: 'inherit' }}
             >
               <Heart size={20} /> Wishlist
-            </button>
-            <button 
-              className={`sidebar-item ${activeTab === 'reviews' ? 'active' : ''}`}
-              onClick={() => setActiveTab('reviews')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%', color: 'inherit' }}
-            >
-              <Star size={20} /> My Reviews
             </button>
           </div>
         </aside>
@@ -141,53 +104,34 @@ export default function TouristDashboard() {
               <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {bookings.length > 0 ? (
                   bookings.map(booking => (
-                    <div key={booking.id} className="glass" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div key={booking._id} className="glass" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ flex: 1 }}>
-                        <h3 style={{ marginBottom: '5px' }}>{booking.homestayName}</h3>
-                        <p className="card-location"><MapPin size={14} /> {booking.location}</p>
+                        <h3 style={{ marginBottom: '5px' }}>{booking.homestayId?.title || 'Unknown Homestay'}</h3>
                         <div style={{ display: 'flex', gap: '20px', marginTop: '10px', fontSize: '0.9rem' }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Calendar size={14} /> {booking.checkIn} to {booking.checkOut}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Calendar size={14} /> {new Date(booking.checkInDate).toLocaleDateString()} to {new Date(booking.checkOutDate).toLocaleDateString()}</span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Clock size={14} /> {booking.guests} Guests</span>
                         </div>
-                        {booking.paymentStatus === 'Paid' ? (
-                          <p style={{ marginTop: '10px', fontSize: '0.85rem', color: '#4caf50', fontWeight: '600' }}>
-                            Payment Status: Paid {booking.paymentMethod ? `via ${booking.paymentMethod}` : ''}
-                          </p>
-                        ) : (
-                          <p style={{ marginTop: '10px', fontSize: '0.85rem', color: '#ffb400', fontWeight: '600' }}>
-                            Payment Status: Pending
-                          </p>
-                        )}
+                        <p style={{ marginTop: '10px', fontSize: '0.85rem', color: '#4caf50', fontWeight: '600' }}>
+                          Status: {booking.status || 'Confirmed'}
+                        </p>
                       </div>
                       <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '150px' }}>
-                        <span className="btn btn-primary" style={{ background: booking.paymentStatus === 'Paid' ? '#4caf50' : '#ffb400', fontSize: '0.8rem', border: 'none', cursor: 'default' }}>
-                          {booking.paymentStatus === 'Paid' ? 'Confirmed' : 'Pending Payment'}
+                        <span className="btn btn-primary" style={{ background: '#4caf50', fontSize: '0.8rem', border: 'none', cursor: 'default' }}>
+                          {booking.status || 'Confirmed'}
                         </span>
                         
-                        {booking.paymentStatus !== 'Paid' && (
-                          <button 
-                            className="btn btn-primary" 
-                            style={{ background: '#4caf50', fontSize: '0.8rem', border: 'none', display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}
-                            onClick={() => handlePayment(booking.id, booking.homestayName)}
-                          >
-                            <CreditCard size={14} /> Make Payment
-                          </button>
-                        )}
-
-                        {booking.paymentStatus === 'Paid' && (
-                          <button 
-                            className="btn btn-primary" 
-                            style={{ background: '#6c5ce7', fontSize: '0.8rem', border: 'none', display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}
-                            onClick={() => setReviewingBooking({ id: booking.id, homestayId: booking.homestayId, homestayName: booking.homestayName })}
-                          >
-                            <MessageSquare size={14} /> Write Review
-                          </button>
-                        )}
+                        <button 
+                          className="btn btn-primary" 
+                          style={{ background: '#6c5ce7', fontSize: '0.8rem', border: 'none', display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}
+                          onClick={() => setReviewingBooking({ id: booking._id, homestayId: booking.homestayId?._id, homestayName: booking.homestayId?.title || 'Unknown Homestay' })}
+                        >
+                          <MessageSquare size={14} /> Write Review
+                        </button>
 
                         <button 
                           className="btn btn-outline" 
                           style={{ fontSize: '0.8rem', color: 'red', display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}
-                          onClick={() => setConfirmCancel({ id: booking.id, name: booking.homestayName })}
+                          onClick={() => setConfirmCancel({ id: booking._id, name: booking.homestayId?.title || 'Unknown Homestay' })}
                         >
                           <Trash2 size={14} /> Cancel Booking
                         </button>
@@ -207,31 +151,10 @@ export default function TouristDashboard() {
               <div className="grid" style={{ marginTop: '20px' }}>
                 {wishlist.length > 0 ? (
                   wishlist.map(item => (
-                    <HomestayCard key={item.id} homestay={item} />
+                    <HomestayCard key={item._id} homestay={item} />
                   ))
                 ) : (
                   <p>Your wishlist is empty.</p>
-                )}
-              </div>
-            </section>
-          )}
-
-          {activeTab === 'reviews' && (
-            <section>
-              <h2>My Reviews</h2>
-              <div style={{ marginTop: '20px' }}>
-                {reviews.length > 0 ? (
-                  reviews.map(review => (
-                    <div key={review.id} className="review-item glass" style={{ marginBottom: '15px', borderRadius: '12px' }}>
-                      <div className="stars">
-                        {[...Array(review.rating)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
-                      </div>
-                      <p>{review.comment}</p>
-                      <p style={{ fontSize: '0.8rem', opacity: 0.5, marginTop: '10px' }}>Posted on {review.date}</p>
-                    </div>
-                  ))
-                ) : (
-                  <p>You haven't written any reviews yet.</p>
                 )}
               </div>
             </section>

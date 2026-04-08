@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Home, Plus, Trash2, Edit, Calendar, Users, Upload } from 'lucide-react';
+import api from '../services/api';
+import { fetchBookingsByHost, deleteBooking } from '../services/bookingApi';
 
 export default function HostDashboard() {
   const [activeTab, setActiveTab] = useState('listings');
   const [myStays, setMyStays] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
-  const [confirmCancel, setConfirmCancel] = useState(null); // {id, name}
+  const [confirmCancel, setConfirmCancel] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [newStay, setNewStay] = useState({
     name: '',
@@ -16,27 +18,32 @@ export default function HostDashboard() {
   });
   const user = JSON.parse(localStorage.getItem('user'));
 
+  const [imageFile, setImageFile] = useState(null);
+
   useEffect(() => {
-    const loadData = () => {
-      const allStays = JSON.parse(localStorage.getItem('homestays')) || [];
-      const filteredStays = allStays.filter(s => s.hostId === user?.id);
-      setMyStays(filteredStays);
-      
-      const allBookings = JSON.parse(localStorage.getItem('bookings')) || [];
-      // Filter bookings only for this host's listings
-      const hostStayIds = filteredStays.map(s => s.id);
-      const filteredBookings = allBookings.filter(b => hostStayIds.includes(b.homestayId));
-      setBookings(filteredBookings);
+    const loadData = async () => {
+      try {
+        // Fetch homestays filtered by host
+        const staysRes = await api.get('/homestays/host/mylisted');
+        setMyStays(staysRes.data);
+
+        // Fetch bookings for this host
+        if (user?._id) {
+          const hostBookings = await fetchBookingsByHost(user._id);
+          setBookings(hostBookings);
+        }
+      } catch (err) {
+        console.error('Failed to load host data:', err);
+      }
     };
 
     loadData();
-    window.addEventListener('storage', loadData);
-    return () => window.removeEventListener('storage', loadData);
-  }, [user?.id]);
+  }, [user?._id]);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setNewStay({ ...newStay, image: reader.result });
@@ -45,61 +52,55 @@ export default function HostDashboard() {
     }
   };
 
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
-    const stay = {
-      id: Date.now(),
-      ...newStay,
-      price: parseInt(newStay.price),
-      rating: '5.0',
-      hostId: user.id,
-      image: newStay.image || 'https://picsum.photos/seed/house/400/300'
-    };
-    const allStays = JSON.parse(localStorage.getItem('homestays')) || [];
-    const updated = [...allStays, stay];
-    localStorage.setItem('homestays', JSON.stringify(updated));
-    setMyStays(updated.filter(s => s.hostId === user.id));
-    setShowAdd(false);
-    setNewStay({ name: '', location: '', price: '', image: '' });
-    
-    // Add notification
-    const notifications = JSON.parse(localStorage.getItem('notifications')) || [];
-    localStorage.setItem('notifications', JSON.stringify([
-      ...notifications, 
-      { id: Date.now(), message: `New listing added: ${stay.name}`, type: 'listing', time: new Date() }
-    ]));
-    window.dispatchEvent(new Event('storage'));
+    try {
+      const formData = new FormData();
+      formData.append('title', newStay.name);
+      formData.append('description', 'A wonderful homestay');
+      formData.append('location', newStay.location);
+      formData.append('price', parseInt(newStay.price));
+      
+      if (imageFile) {
+        formData.append('images', imageFile);
+      }
+
+      const res = await api.post('/homestays', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      setMyStays([...myStays, res.data]);
+      setShowAdd(false);
+      setNewStay({ name: '', location: '', price: '', image: '' });
+      setImageFile(null);
+      setSuccessMessage('Listing added successfully! ✅');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      console.error('Failed to add listing:', err);
+    }
   };
 
-  const handleDelete = (id) => {
-    const allStays = JSON.parse(localStorage.getItem('homestays')) || [];
-    const updated = allStays.filter(s => s.id !== id);
-    localStorage.setItem('homestays', JSON.stringify(updated));
-    setMyStays(updated.filter(s => s.hostId === user.id));
-    window.dispatchEvent(new Event('storage'));
+  const handleDelete = async (id) => {
+    try {
+      await api.delete(`/homestays/${id}`);
+      setMyStays(myStays.filter(s => s._id !== id));
+      setSuccessMessage('Listing deleted.');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      console.error('Failed to delete listing:', err);
+    }
   };
 
-  const handleCancelBooking = (id, homestayName) => {
-    const allBookings = JSON.parse(localStorage.getItem('bookings')) || [];
-    const updatedBookings = allBookings.filter(b => b.id !== id);
-    localStorage.setItem('bookings', JSON.stringify(updatedBookings));
-    
-    // Refresh local state
-    const allStays = JSON.parse(localStorage.getItem('homestays')) || [];
-    const hostStayIds = allStays.filter(s => s.hostId === user?.id).map(s => s.id);
-    setBookings(updatedBookings.filter(b => hostStayIds.includes(b.homestayId)));
-
-    // Add notification
-    const notifications = JSON.parse(localStorage.getItem('notifications')) || [];
-    localStorage.setItem('notifications', JSON.stringify([
-      ...notifications,
-      { id: Date.now(), message: `Host cancelled booking for ${homestayName}`, type: 'cancellation', time: new Date() }
-    ]));
-
-    window.dispatchEvent(new Event('storage'));
-    setConfirmCancel(null);
-    setSuccessMessage(`Booking for ${homestayName} cancelled successfully.`);
-    setTimeout(() => setSuccessMessage(''), 3000);
+  const handleCancelBooking = async (id, homestayName) => {
+    try {
+      await deleteBooking(id);
+      setBookings(bookings.filter(b => b._id !== id));
+      setConfirmCancel(null);
+      setSuccessMessage(`Booking for ${homestayName} cancelled successfully.`);
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      console.error('Failed to cancel booking:', err);
+    }
   };
 
   return (
@@ -191,7 +192,7 @@ export default function HostDashboard() {
                 <h2>My Listings</h2>
                 <div className="grid" style={{ marginTop: '20px' }}>
                   {myStays.length > 0 ? myStays.map(stay => (
-                    <div key={stay.id} className="card glass">
+                    <div key={stay._id} className="card glass">
                       <img src={stay.image} alt={stay.name} className="card-img" referrerPolicy="no-referrer" />
                       <div className="card-content">
                         <h3 className="card-title">{stay.name}</h3>
@@ -199,7 +200,7 @@ export default function HostDashboard() {
                         <p className="card-price">₹{stay.price} <span>/ night</span></p>
                         <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
                           <button className="btn btn-outline" style={{ flex: 1 }}><Edit size={16} /></button>
-                          <button className="btn btn-outline" style={{ flex: 1, color: 'red' }} onClick={() => handleDelete(stay.id)}><Trash2 size={16} /></button>
+                          <button className="btn btn-outline" style={{ flex: 1, color: 'red' }} onClick={() => handleDelete(stay._id)}><Trash2 size={16} /></button>
                         </div>
                       </div>
                     </div>
@@ -215,10 +216,10 @@ export default function HostDashboard() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 {bookings.length > 0 ? (
                   bookings.map(b => (
-                    <div key={b.id} className="glass" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div key={b._id} className="glass" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <h3 style={{ margin: '0 0 5px 0' }}>{b.homestayName}</h3>
-                        <p style={{ fontSize: '0.9rem', opacity: 0.7 }}><Calendar size={14} /> {b.checkIn} to {b.checkOut}</p>
+                        <h3 style={{ margin: '0 0 5px 0' }}>{b.homestayId?.title || 'Unknown Homestay'}</h3>
+                        <p style={{ fontSize: '0.9rem', opacity: 0.7 }}><Calendar size={14} /> {new Date(b.checkInDate).toLocaleDateString()} to {new Date(b.checkOutDate).toLocaleDateString()}</p>
                         <p style={{ fontSize: '0.9rem', marginTop: '5px' }}><Users size={14} /> {b.guests} Guests</p>
                       </div>
                       <div style={{ textAlign: 'right' }}>
@@ -232,11 +233,11 @@ export default function HostDashboard() {
                         }}>
                           {b.status || 'Confirmed'}
                         </span>
-                        <p style={{ fontSize: '0.8rem', opacity: 0.5, marginTop: '10px' }}>Booking ID: #{b.id}</p>
+                        <p style={{ fontSize: '0.8rem', opacity: 0.5, marginTop: '10px' }}>Booking ID: #{b._id?.slice(-6)}</p>
                         <button 
                           className="btn btn-outline" 
                           style={{ fontSize: '0.7rem', color: 'red', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center', padding: '5px 10px' }}
-                          onClick={() => setConfirmCancel({ id: b.id, name: b.homestayName })}
+                          onClick={() => setConfirmCancel({ id: b._id, name: b.homestayId?.title || 'Unknown Homestay' })}
                         >
                           <Trash2 size={12} /> Cancel
                         </button>

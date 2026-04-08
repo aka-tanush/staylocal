@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, CreditCard, Smartphone, Globe } from 'lucide-react';
+import { createBooking } from '../services/bookingApi';
 
 export default function BookingModal({ homestay, onClose }) {
   const [step, setStep] = useState(1); // 1: Details, 2: Payment
@@ -17,41 +18,29 @@ export default function BookingModal({ homestay, onClose }) {
     setStep(2);
   };
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     setIsProcessing(true);
     
-    // Simulate payment processing
-    setTimeout(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user'));
       const newBooking = {
-        id: Date.now(),
-        homestayId: homestay.id,
-        homestayName: homestay.name,
-        location: homestay.location,
-        ...booking,
-        userRole: "Tourist",
-        status: 'Confirmed',
-        paymentStatus: 'Paid',
-        paymentMethod: paymentMethod
+        homestayId: homestay._id,
+        checkInDate: booking.checkIn,
+        checkOutDate: booking.checkOut,
+        guests: booking.guests
       };
 
-      const bookings = JSON.parse(localStorage.getItem('bookings')) || [];
-      localStorage.setItem('bookings', JSON.stringify([...bookings, newBooking]));
-
-      // Add notification
-      const notifications = JSON.parse(localStorage.getItem('notifications')) || [];
-      localStorage.setItem('notifications', JSON.stringify([
-        ...notifications, 
-        { id: Date.now(), message: `Booking confirmed & Paid for ${homestay.name}`, type: 'booking', time: new Date() }
-      ]));
-
+      await createBooking(newBooking);
       setIsProcessing(false);
       setSuccess(true);
-      window.dispatchEvent(new Event('storage'));
       
       setTimeout(() => {
         onClose();
       }, 2500);
-    }, 1500);
+    } catch (err) {
+      console.error('Booking failed:', err);
+      setIsProcessing(false);
+    }
   };
 
   return (
