@@ -1,19 +1,31 @@
-import axios from "axios";
-
-const API = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
-// Backend auth routes are under `/api/auth/*`
-const API_BASE = API.endsWith("/api") ? API : `${API}/api`;
+const RAW_API = import.meta.env.VITE_API_URL || "";
+const API_ROOT = RAW_API.replace(/\/$/, "");
+// Ensure base URL includes `/api` exactly once
+const API = API_ROOT.endsWith("/api") ? API_ROOT : `${API_ROOT}/api`;
 
 // Register
 export const registerUser = async (data) => {
     console.log("Registering user with data:", data);
     try {
-        console.log("Register API:", `${API_BASE}/auth/register`);
-        const res = await axios.post(`${API_BASE}/auth/register`, data, {
-            headers: { "Content-Type": "application/json" },
+        console.log("Register URL:", `${API}/auth/register`);
+        const res = await fetch(`${API}/auth/register`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
         });
-        console.log("Registration response:", res.data);
-        return res.data;
+
+        const payload = await res.json().catch(() => null);
+
+        if (!res.ok) {
+            const error = new Error(payload?.message || `Request failed with status ${res.status}`);
+            error.response = { data: payload, status: res.status };
+            throw error;
+        }
+
+        console.log("Registration response:", payload);
+        return payload;
     } catch (error) {
         console.error("Registration error:", error.response?.data || error.message);
         throw error;
@@ -24,11 +36,24 @@ export const registerUser = async (data) => {
 export const loginUser = async (data) => {
     console.log("Logging in user with data:", data);
     try {
-        const res = await axios.post(`${API_BASE}/auth/login`, data, {
-            headers: { "Content-Type": "application/json" },
+        const res = await fetch(`${API}/auth/login`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
         });
-        console.log("Login response:", res.data);
-        return res.data;
+
+        const payload = await res.json().catch(() => null);
+
+        if (!res.ok) {
+            const error = new Error(payload?.message || `Request failed with status ${res.status}`);
+            error.response = { data: payload, status: res.status };
+            throw error;
+        }
+
+        console.log("Login response:", payload);
+        return payload;
     } catch (error) {
         console.error("Login error:", error.response?.data || error.message);
         throw error;
