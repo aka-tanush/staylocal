@@ -1,20 +1,17 @@
 import axios from "axios";
 
-// Prefer explicit env var, otherwise use local backend in dev.
-const rawApiUrl = import.meta.env.VITE_API_URL || "";
+// Prefer explicit env var; in dev fall back to Vite proxy.
+const API = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 const isDev = import.meta.env.DEV;
-const isLocalHost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+const isLocalHost =
+  window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
 
-let baseURL = "";
-
-if (rawApiUrl) {
-  baseURL = rawApiUrl.endsWith("/api") ? rawApiUrl : `${rawApiUrl.replace(/\/$/, "")}/api`;
-} else if (isDev || isLocalHost) {
-  // Use Vite proxy in dev to avoid CORS/network issues.
-  baseURL = "/api";
-} else {
-  baseURL = "https://staylocal-backend.onrender.com/api";
-}
+// Backend uses `/api/...` prefix (Spring controller maps `/api/auth`).
+// Normalize baseURL to always end in `/api`, without duplicating it.
+const baseURL =
+  API
+    ? (API.endsWith("/api") ? API : `${API}/api`)
+    : (isDev || isLocalHost ? "/api" : "");
 
 console.log("Using API Base URL:", baseURL);
 
