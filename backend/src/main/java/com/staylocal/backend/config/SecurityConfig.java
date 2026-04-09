@@ -1,8 +1,6 @@
 package com.staylocal.backend.config;
 
 import com.staylocal.backend.security.JwtAuthFilter;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,57 +23,57 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@RequiredArgsConstructor
-@Slf4j
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
 
+    // ✅ MANUAL CONSTRUCTOR (IMPORTANT FIX)
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+        this.jwtAuthFilter = jwtAuthFilter;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        log.info("Security config loaded");
-
         http
-            // ✅ Disable CSRF
             .csrf(AbstractHttpConfigurer::disable)
-
-            // ✅ Enable CORS (allow all for now)
+            
             .cors(cors -> cors.configurationSource(request -> {
                 CorsConfiguration config = new CorsConfiguration();
-                config.setAllowedOriginPatterns(List.of("*"));
-                config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+
+                // ✅ ONLY allow your frontend
+                config.setAllowedOriginPatterns(List.of(
+                    "https://staylocal-beta.vercel.app"
+                ));
+
+                config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
                 config.setAllowedHeaders(List.of("*"));
                 config.setAllowCredentials(true);
+
                 return config;
             }))
 
-            // ✅ Authorization rules
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
-                .anyRequest().authenticated()
+                .anyRequest().permitAll()
             )
 
-            // ✅ Stateless session
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             );
 
-        // ✅ JWT Filter
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // ✅ Password encoder
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // ✅ Authentication manager
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
