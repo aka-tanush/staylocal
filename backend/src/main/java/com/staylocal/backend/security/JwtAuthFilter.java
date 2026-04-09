@@ -25,6 +25,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtUtils jwtUtils;
     private final UserRepository userRepository;
 
+    // ✅ This is enough to skip auth endpoints
     @Override
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
         String uri = request.getRequestURI();
@@ -34,46 +35,52 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
-                                    @NonNull FilterChain filterChain) throws ServletException, IOException {
-        String path = request.getRequestURI();
-
-        if (path != null && path.startsWith("/api/auth")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+                                    @NonNull FilterChain filterChain)
+            throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
+
         String token = null;
         String email = null;
 
-        // If no JWT is present, do not block the request.
-        // Protected endpoints will be enforced by Spring Security rules.
+        // ✅ If no token → DO NOT BLOCK
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+        try {
             token = authHeader.substring(7);
-            try {
-                email = jwtUtils.extractEmail(token);
-            } catch (Exception e) {
-                log.warn("Could not extract email from JWT: {}", e.getMessage());
-            }
+            email = jwtUtils.extractEmail(token);
+        } catch (Exception e) {
+            log.warn("JWT extraction failed: {}", e.getMessage());
+            filterChain.doFilter(request, response);
+            return;
         }
 
+        // ✅ Set authentication only if valid
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userRepository.findByEmail(email)
-                    .orElse(null);
+
+            UserDetails userDetails = userRepository.findByEmail(email).orElse(null);
 
             if (userDetails != null && jwtUtils.validateToken(token, userDetails)) {
+
                 UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
+
+                authToken.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request)
+                );
+
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }
 
+        // ✅ ALWAYS continue filter chain
         filterChain.doFilter(request, response);
     }
 }
