@@ -3,7 +3,7 @@ package com.staylocal.backend.config;
 import com.staylocal.backend.security.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -31,9 +31,6 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
 
-    @Value("${cors.allowed-origin}")
-    private String allowedOrigin;
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
@@ -43,17 +40,17 @@ public class SecurityConfig {
             // ✅ Disable CSRF
             .csrf(AbstractHttpConfigurer::disable)
 
-            // ✅ KEEP your CORS config (as requested)
+            // ✅ Enable CORS (allow all for now)
             .cors(cors -> cors.configurationSource(request -> {
                 CorsConfiguration config = new CorsConfiguration();
-                config.setAllowedOriginPatterns(List.of(allowedOrigin));
-                config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
+                config.setAllowedOriginPatterns(List.of("*"));
+                config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                 config.setAllowedHeaders(List.of("*"));
                 config.setAllowCredentials(true);
                 return config;
             }))
 
-            // ✅ EXACT AUTH RULES (as required)
+            // ✅ Authorization rules
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
@@ -66,7 +63,7 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             );
 
-        // ✅ JWT filter BEFORE UsernamePasswordAuthenticationFilter
+        // ✅ JWT Filter
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
