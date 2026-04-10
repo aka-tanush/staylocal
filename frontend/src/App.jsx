@@ -11,7 +11,7 @@ import HostDashboard from './pages/HostDashboard';
 import LocalGuideDashboard from './pages/LocalGuideDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import Settings from './pages/Settings';
-import ProtectedRoute from "./components/ProtectedRoute";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 export default function App() {
   useEffect(() => {
